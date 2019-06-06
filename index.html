@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<!-- Required meta tags -->
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+		<!-- CSS -->
+		<link rel="stylesheet" type="text/css" href="style.css">
+
+		<!-- Bootstrap CSS -->
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+		<title></title>
+	</head>
+	<body style="height: 100%; background-color: black">
+		<div class="introblock height">
+			<div class="gameArea">
+				<div style="padding-top: 200px; position: absolute; width: 100%; text-align: center">
+					<h1 style="font-family: headtext; color: white; font-size: 72px;">FLAME</h1>
+					<div>
+						<button class="btn btn-dark" style="width: 200px; font-family: font1; font-size: 24px;">START GAME</button>
+					</div>
+				</div>
+				<img src="images/campfire2.gif" style="width: 20%; position: absolute; bottom: 0; margin-right: 40%; margin-left: 40%;" class="picture">
+			</div>
+			<div style="width: 100%;" class="slotArea"></div>
+		</div>
+
+		<div class="transitblock" style="font-family: headtext; color: white; display: none; font-size: 36px; margin-top: 25%">
+			<h5>don't let your flame go out</h5>
+			<div>
+				<p>controls: click everywhere</p>
+			</div>
+		</div>
+
+		<div class="gameblock height" style="display: none;">
+			<div class="gameArea">
+				<div class="spawn" style="width: 100px; height: 100%; position: absolute; "></div>
+				<div class="fire" style="width: 20%; left: 40%; right: 40%; bottom: 0; position: absolute; z-index: 0; ">
+					<img src="images/campfire2.gif" style="width: 100%" class="fire_img">
+					<div class="firePowerBar" style="width: 100%; height: 5px; background-color: green; margin-left: auto; margin-right: auto; "></div>
+				</div>
+				<div class="spawn" style="width: 80px; height: 100%; position: absolute; right: 20px; "></div>
+			</div>
+			<div class="slotArea">
+				<div class="slotSet">
+					<div class = "slot" style="margin-left: 0px;"></div>
+					<div class = "slot"></div>
+					<div class = "slot"></div>
+					<div class = "slot"></div>
+					<div class = "slot"></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="endblock height" style="text-align: center; padding-top: 25%; display: none; ">
+			<h5 style="font-family: headtext; color: white; font-size: 72px;" class="text_spot"></h5>
+		</div>
+
+	 
+
+
+
+
+		<script type="text/javascript">
+			let gameover = false;
+
+			let start_btn = document.querySelector('.btn'); // кнопка старта
+			let rand = function(n){ return Math.round(Math.random()*n) }; // рандом
+			let gameArea = document.querySelector('.gameArea'); // игровое поле
+			let spawns = document.querySelectorAll('.spawn'); // места появления монстров
+			let fire = document.querySelector('.fire'); // костёр
+			let powerBar = document.querySelector('.firePowerBar'); // шкала силы огня
+			let slots = document.querySelectorAll('.slot'); // слоты
+			let freeslots = [0, 1, 2, 3, 4]; // индексы свободных слотов
+			let attack = 25; // урон, наносимый игроком
+
+			let darken = function(){
+				document.querySelector('.picture').style.filter = 'brightness(0)';
+				for (let i = 0; i < 100; i++){
+					setTimeout(function(){
+						document.querySelector('.picture').style.filter = 'brightness(' + i + '%)';
+					},500);
+				};
+			};
+
+
+			// вызов экрана окончания игры
+			let endgame = function(){
+				document.querySelector('.gameblock').style.display = 'none';
+				document.querySelector('.endblock').style.display = 'block';
+				if (gameover == true){
+					document.querySelector('.text_spot').innerHTML = 'you lost';
+				}
+				else{
+					document.querySelector('.text_spot').innerHTML = 'you won!';
+				};
+			};
+
+
+			// монстры: список объектов и вспомогательный список чисел
+			let monsters = [
+				{url: 'images/monsters/drop.gif', width: '70px', speed: 45, hp: '80px', dmg: 10},
+				{url: 'images/monsters/spike.gif', width: '100px', speed: 70, hp: '150px', dmg: 20},
+				{url: 'images/monsters/bat.gif', width: '120px', speed: 50, hp: '120px', dmg: 20},
+				{url: 'images/monsters/zombie.gif', width: '120px', speed: 95, hp: '200px', dmg: 20},
+			];
+			let array = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14];
+
+
+			// предмет 
+			let wood = {url: 'images/items/wood.png', width: '80px', marginTop: '20px'};
+			
+			// уменьшение силы огня
+			let decPower = function(dmg){
+				if (powerBar.offsetWidth >= dmg){
+					powerBar.style.width = (powerBar.offsetWidth - dmg) + 'px';
+				}
+				else{
+					powerBar.style.width = 0 + 'px';
+					gameover = true;
+				};
+			};
+
+
+			// движение объекта
+			let move = function(i, place){
+                let obj = document.querySelector('.monsta'+i);
+                if (place == 0) way = obj.style.left 
+                	else way = obj.style.right;
+                if (way != ''){
+                    way = parseInt(way); }
+                else{
+                    way = 0; };
+                way += 10;
+                if (place == 0) obj.style.left = way+'px' 
+                	else obj.style.right = way+'px';
+                return way;
+            };
+
+
+            // лут после смерти монстра
+			let drop = function(place, left, right){
+				let loot = document.createElement('img');
+				spawns[place].appendChild(loot);
+				loot.src = wood.url;
+				loot.style.position = 'absolute';
+				if (place == 0) loot.style.left = left;
+				else loot.style.right = right;
+				loot.style.bottom = '0px';
+				loot.style.width = wood.width;
+				loot.style.zIndex = '1';
+				setTimeout(function(){ loot.remove(); }, 5000);
+
+				// положить в слот по нажатию
+				loot.onclick = function(){
+					if (freeslots != ''){
+						loot.remove();
+						let k = freeslots.shift();
+						let trunk = document.createElement('img');
+						slots[k].appendChild(trunk);
+						trunk.style.marginTop = wood.marginTop;
+						trunk.src = wood.url;
+						trunk.style.width = wood.width;
+
+						// использовать предмет
+						trunk.onclick = function(){
+							trunk.remove();
+							freeslots.unshift(k);
+							if (powerBar.offsetWidth <= fire.offsetWidth - 50){
+								powerBar.style.width = parseInt(powerBar.style.width) + 50 + 'px';
+							}
+							else{
+								powerBar.style.width = '100%';
+							};
+						};
+					};
+				};
+			};
+
+
+			// появление монстра с движением, уроном огню, лутом
+			let appear = function(){
+				// рандомный монстр
+				let j = rand(monsters.length-1);
+
+				// появление контейнера
+				let cont = document.createElement('div');
+					let place = rand(1);
+					spawns[place].appendChild(cont);
+					if (place == 0) {
+						cont.style.transform = 'scale(-1, 1)';
+					}
+					else {
+						cont.style.right = parseInt(cont.style.right) + 10 + 'px';
+					}
+					let i = array.pop();
+					cont.setAttribute('class','monsta'+i);
+					cont.style.position = 'absolute';
+					cont.style.bottom = '10px';
+					cont.style.zIndex = '1';
+					cont.style.textAlign = 'center';
+
+				// появление шкалы здоровья монстра
+				let hpBar = document.createElement('div');
+					cont.appendChild(hpBar);
+					hpBar.style.height = '5px';
+					hpBar.style.width = monsters[j].hp;
+					hpBar.style.backgroundColor = 'red';
+					hpBar.style.marginBottom = '5px';
+					hpBar.style.marginLeft = 'auto';
+					hpBar.style.marginRight = 'auto';
+					hpBar.style.border = '1px solid black';
+
+				// появление картинки монстра
+				let monstaImg = document.createElement('img');
+					cont.appendChild(monstaImg);
+					monstaImg.src = monsters[j].url;
+					monstaImg.style.width = monsters[j].width;
+					monstaImg.style.marginLeft = 'auto';
+					monstaImg.style.marginRight = 'auto';
+					
+				let decIntID = '';
+
+				// интервал движения. при остановке запускается нанесение урона
+				let moveIntID = setInterval(function(){ 
+					if(move(i,place) >= fire.offsetLeft){ 
+						clearInterval(moveIntID); 
+						decIntID = setInterval(function(){ decPower(monsters[j].dmg); },1000);
+					}; 
+				},monsters[j].speed);
+
+				// удар (клик) по монстру 
+				monstaImg.onclick = function(){ 
+					hpBar.style.width = (parseInt(hpBar.style.width)-attack)+'px';
+
+					// смерть монстра
+					if (parseInt(hpBar.style.width) <= attack){
+						hpBar.style.width = '0px';
+						clearInterval(moveIntID); 
+						clearInterval(decIntID);
+						monstaImg.remove();
+						hpBar.remove();
+
+						// исчезание - дым
+						let disappearance = function(){
+							let smoke = document.createElement('img');
+							cont.appendChild(smoke);
+							smoke.style.width = parseInt(monsters[j].width) + 50 + 'px';
+							smoke.style.marginLeft = 'auto';
+							smoke.style.marginRight = 'auto';
+							smoke.src = 'images/monsters/smoke.gif';
+							setTimeout(function(){ smoke.remove() },500);
+						};
+						disappearance();
+						array.push(i); // возврат использованного номера в список
+						drop(place, cont.style.left, cont.style.right); // лут
+						setTimeout(function(){ cont.remove(); }, 500); // исчезание всего контейнера
+					};
+				};
+			};
+
+
+
+
+			// нажатие на кнопку старта - тело программы
+			start_btn.onclick = function(){	
+				document.querySelector('.introblock').style.display = 'none';
+				document.querySelector('.gameblock').style.display = 'none';
+				document.querySelector('.endblock').style.display = 'none';
+				document.querySelector('.transitblock').style.display = 'block';
+
+				// исчезание переходного экрана, начало игры
+				setTimeout(function(){
+					document.querySelector('.transitblock').style.display = 'none';
+					document.querySelector('.gameblock').style.display = 'block';
+					appear();
+
+					// через минуту конец игры
+					setTimeout(function(){ endgame(); clearInterval(mainInt); }, 60000);
+
+					// основной цикл, каждые полсекунды проверка gameover и +монстр
+					let mainInt = setInterval(function(){
+						if (gameover != true){
+							appear();
+						}
+						else{
+							// остановка интервалов
+							for (let i = 0; i < array.length+5; i++){
+		        				window.clearInterval(i);
+							};
+							// все монстры исчезают
+							for (let i = 0; i < 15; i++){
+								if (array.includes(i) == false){
+									document.querySelector('.monsta'+i).remove();
+								};
+							};
+							// огонь исчезает
+							document.querySelector('.fire_img').remove();
+							powerBar.remove();
+							let smoke = document.createElement('img');
+							fire.appendChild(smoke);
+							smoke.style.width = '300px';
+							smoke.style.marginLeft = 'auto';
+							smoke.style.marginRight = 'auto';
+							smoke.src = 'images/monsters/smoke.gif';
+							setTimeout(function(){ 
+								smoke.remove(); 
+								clearInterval(mainInt); 
+								// экран поражения
+								endgame();
+							},500);
+						};
+					},2500);
+				}, 3000);
+				
+			};
+
+
+
+
+			
+
+		</script>
+
+	</body>
+</html>
